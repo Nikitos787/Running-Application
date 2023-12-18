@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">Running Application</string>
+    <string name="API_KEY">YOUR_API_KEY</string>
+    <string-array name="filter_options">
+        <item>Date</item>
+        <item>Running Time</item>
+        <item>Average Speed</item>
+        <item>Calories Burnt</item>
+        <item>Distance</item>
+
+    </string-array>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="running_application">Running Application</string>
+    <string name="your_runs">Your Runs</string>
+    <string name="your_statistic">Your Statistic</string>
+    <string name="your_setting">Your Setting</string>
+    <string name="sort_by">Sort By:</string>
+    <string name="floating_button">Floating Button</string>
+    <string name="your_name">Your Name</string>
+    <string name="apply_changes">Apply Changes</string>
+    <string name="your_weight">Your Weight</string>
+    <string name="cancel_run">Cancel Run</string>
+</resources>
