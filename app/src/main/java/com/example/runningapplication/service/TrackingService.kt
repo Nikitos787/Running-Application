@@ -62,19 +62,11 @@ class TrackingService : LifecycleService() {
         val timeRunsInMillis = MutableLiveData<Long>()
     }
 
-    private val locationCallback = object : LocationCallback() {
-
-        override fun onLocationResult(result: LocationResult) {
-            super.onLocationResult(result)
-            if (isTracking.value!!) {
-                result.locations.let { locations ->
-                    for (location in locations) {
-                        addPathPoint(location)
-                        Timber.d("Adding new location. Location is: ${location.latitude}, ${location.longitude}")
-                    }
-                }
-            }
-        }
+    private fun postInitialValues() {
+        isTracking.postValue(false)
+        pathPoint.postValue(mutableListOf())
+        timeRunInSeconds.postValue(0L)
+        timeRunsInMillis.postValue(0L)
     }
 
     override fun onCreate() {
@@ -85,6 +77,16 @@ class TrackingService : LifecycleService() {
             updateLocationTracking(it)
             updateNotificationTrackingState(it)
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun killService() {
+        isKilledService = true
+        isItFirstRun = true
+        pauseService()
+        postInitialValues()
+        stopForeground(true)
+        stopSelf()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -144,78 +146,9 @@ class TrackingService : LifecycleService() {
         }
     }
 
-    private fun killService() {
-        isKilledService = true
-        isItFirstRun = true
-        pauseService()
-        postInitialValues()
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-    }
-
     private fun pauseService() {
         isTimerEnable = false
         isTracking.postValue(false)
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun updateLocationTracking(isTracking: Boolean) {
-        if (isTracking) {
-            if (TrackingUtility.hasLocationPermissions(this)) {
-                val request = LocationRequest.Builder(
-                    Priority.PRIORITY_HIGH_ACCURACY,
-                    LOCATION_UPDATE_INTERVAL
-                )
-                    .setWaitForAccurateLocation(false)
-                    .setMinUpdateIntervalMillis(LOCATION_FASTEST_INTERVAL)
-                    .setMaxUpdateDelayMillis(LOCATION_MAX_DELAY_INTERVAL)
-                    .build()
-                fusedLocationProviderClient.requestLocationUpdates(
-                    request,
-                    locationCallback,
-                    Looper.getMainLooper()
-                )
-            }
-        } else {
-            fusedLocationProviderClient.removeLocationUpdates(locationCallback)
-        }
-    }
-
-    private fun addEmptyPolyline() = pathPoint.value?.apply {
-        add(mutableListOf())
-        pathPoint.postValue(this)
-    } ?: pathPoint.postValue(mutableListOf(mutableListOf()))
-
-    private fun addPathPoint(location: Location?) {
-        location?.let {
-            val position = LatLng(it.latitude, it.longitude)
-            pathPoint.value?.apply {
-                last().add(position)
-                pathPoint.postValue(this)
-            }
-        }
-    }
-
-    private fun startForegroundService() {
-        isTracking.postValue(true)
-        startTimer()
-
-        val notificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            createNotificationChannel(notificationManager)
-        }
-
-
-        startForeground(NOTIFICATION_ID, baseNotificationBuilder.build())
-        timeRunInSeconds.observe(this) {
-            if (!isKilledService) {
-                val notification = currentNotificationBuilder.setContentText(
-                    TrackingUtility.getFormattedStopWatchTime(it * 1000L)
-                )
-                notificationManager.notify(NOTIFICATION_ID, notification.build())
-            }
-        }
     }
 
     private fun updateNotificationTrackingState(isTracking: Boolean) {
@@ -245,6 +178,80 @@ class TrackingService : LifecycleService() {
         }
     }
 
+    @Suppress("DEPRECATION")
+    @SuppressLint("MissingPermission")
+    private fun updateLocationTracking(isTracking: Boolean) {
+        if (isTracking) {
+            if (TrackingUtility.hasLocationPermissions(this)) {
+                val request = LocationRequest().apply {
+                    interval = LOCATION_UPDATE_INTERVAL
+                    fastestInterval = LOCATION_FASTEST_INTERVAL
+                    priority = Priority.PRIORITY_HIGH_ACCURACY
+                }
+                fusedLocationProviderClient.requestLocationUpdates(
+                    request,
+                    locationCallback,
+                    Looper.getMainLooper()
+                )
+            }
+        } else {
+            fusedLocationProviderClient.removeLocationUpdates(locationCallback)
+        }
+    }
+
+    private val locationCallback = object : LocationCallback() {
+
+        override fun onLocationResult(result: LocationResult) {
+            super.onLocationResult(result)
+            if (isTracking.value!!) {
+                result.locations.let { locations ->
+                    for (location in locations) {
+                        addPathPoint(location)
+                        Timber.d("Adding new location. Location is: ${location.latitude}, ${location.longitude}")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun addPathPoint(location: Location?) {
+        location?.let {
+            val position = LatLng(it.latitude, it.longitude)
+            pathPoint.value?.apply {
+                last().add(position)
+                pathPoint.postValue(this)
+            }
+        }
+    }
+
+    private fun addEmptyPolyline() = pathPoint.value?.apply {
+        add(mutableListOf())
+        pathPoint.postValue(this)
+    } ?: pathPoint.postValue(mutableListOf(mutableListOf()))
+
+    private fun startForegroundService() {
+        startTimer()
+        isTracking.postValue(true)
+
+
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            createNotificationChannel(notificationManager)
+        }
+
+
+        startForeground(NOTIFICATION_ID, baseNotificationBuilder.build())
+        timeRunInSeconds.observe(this) {
+            if (!isKilledService) {
+                val notification = currentNotificationBuilder.setContentText(
+                    TrackingUtility.getFormattedStopWatchTime(it * 1000L)
+                )
+                notificationManager.notify(NOTIFICATION_ID, notification.build())
+            }
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(notificationManger: NotificationManager) {
         val channel = NotificationChannel(
@@ -253,12 +260,5 @@ class TrackingService : LifecycleService() {
             IMPORTANCE_LOW
         )
         notificationManger.createNotificationChannel(channel)
-    }
-
-    private fun postInitialValues() {
-        isTracking.postValue(false)
-        pathPoint.postValue(mutableListOf())
-        timeRunInSeconds.postValue(0L)
-        timeRunsInMillis.postValue(0L)
     }
 }

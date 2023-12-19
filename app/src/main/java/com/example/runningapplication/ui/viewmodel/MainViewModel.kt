@@ -80,6 +80,6 @@ class MainViewModel @Inject constructor(private val mainRepository: MainReposito
         }.also { this.sortType = sortType }
     }
 
-    fun insertRun(run: Run) = viewModelScope.launch(Dispatchers.IO) { mainRepository.insertRun(run) }
-    fun deleteRun(run: Run) = viewModelScope.launch(Dispatchers.IO) { mainRepository.deleteRun(run) }
+    fun insertRun(run: Run) = viewModelScope.launch { mainRepository.insertRun(run) }
+    fun deleteRun(run: Run) = viewModelScope.launch { mainRepository.deleteRun(run) }
 }

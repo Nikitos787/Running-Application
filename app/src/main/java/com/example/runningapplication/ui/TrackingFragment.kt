@@ -73,11 +73,6 @@ class TrackingFragment : Fragment(), MenuProvider {
         findNavController().navigate(action)
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        binding.mapView.onSaveInstanceState(outState)
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val menuHost: MenuHost = requireActivity()
@@ -99,9 +94,9 @@ class TrackingFragment : Fragment(), MenuProvider {
         subscribeToObservers()
     }
 
-    private fun setupGoogleMapInstance(savedInstanceState: Bundle?) {
-        binding.mapView.onCreate(savedInstanceState)
-        binding.mapView.getMapAsync {
+    private fun setupGoogleMapInstance(savedInstanceState: Bundle?) = with(binding) {
+        mapView.onCreate(savedInstanceState)
+        mapView.getMapAsync {
             this@TrackingFragment.map = it
             addAllPolylines()
         }
@@ -127,14 +122,19 @@ class TrackingFragment : Fragment(), MenuProvider {
         binding.mapView.onStop()
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        binding.mapView.onDestroy()
-    }
+//    override fun onDestroyView() {
+//        super.onDestroyView()
+//        binding.mapView.onDestroy()
+//    }
 
     override fun onLowMemory() {
         super.onLowMemory()
         binding.mapView.onLowMemory()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        binding.mapView.onSaveInstanceState(outState)
     }
 
     private fun moveCameraToUser() {
