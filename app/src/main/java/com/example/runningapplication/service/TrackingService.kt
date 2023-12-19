@@ -28,6 +28,7 @@ import com.example.runningapplication.other.Constants.NOTIFICATION_ID
 import com.example.runningapplication.other.Constants.TIMER_UPDATE_INTERVAL
 import com.example.runningapplication.other.TrackingUtility
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.Granularity
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -69,6 +70,7 @@ class TrackingService : LifecycleService() {
         timeRunsInMillis.postValue(0L)
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate() {
         super.onCreate()
         currentNotificationBuilder = baseNotificationBuilder
@@ -79,13 +81,12 @@ class TrackingService : LifecycleService() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun killService() {
         isKilledService = true
         isItFirstRun = true
         pauseService()
         postInitialValues()
-        stopForeground(true)
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
@@ -178,16 +179,17 @@ class TrackingService : LifecycleService() {
         }
     }
 
-    @Suppress("DEPRECATION")
     @SuppressLint("MissingPermission")
     private fun updateLocationTracking(isTracking: Boolean) {
         if (isTracking) {
-            if (TrackingUtility.hasLocationPermissions(this)) {
-                val request = LocationRequest().apply {
-                    interval = LOCATION_UPDATE_INTERVAL
-                    fastestInterval = LOCATION_FASTEST_INTERVAL
-                    priority = Priority.PRIORITY_HIGH_ACCURACY
-                }
+            if (TrackingUtility.isLocationOk(this)) {
+                val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, LOCATION_UPDATE_INTERVAL).apply {
+                    setMaxUpdateDelayMillis(LOCATION_MAX_DELAY_INTERVAL)
+                    setMinUpdateIntervalMillis(LOCATION_FASTEST_INTERVAL)
+                    setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
+                    setWaitForAccurateLocation(true)
+                }.build()
+
                 fusedLocationProviderClient.requestLocationUpdates(
                     request,
                     locationCallback,

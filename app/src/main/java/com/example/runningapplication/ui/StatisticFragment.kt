@@ -109,10 +109,4 @@ class StatisticFragment : Fragment() {
             legend.isEnabled = false
         }
     }
-
-    companion object {
-
-        @JvmStatic
-        fun newInstance() = StatisticFragment()
-    }
 }

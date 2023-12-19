@@ -90,8 +90,6 @@ dependencies {
     testImplementation("com.google.dagger:hilt-android-testing:2.49")
     kaptTest("com.google.dagger:hilt-compiler:2.49")
 
-    // For developers using AndroidX in their applications
-    implementation("pub.devrel:easypermissions:3.0.0")
 
     implementation("com.jakewharton.timber:timber:5.0.1")
 

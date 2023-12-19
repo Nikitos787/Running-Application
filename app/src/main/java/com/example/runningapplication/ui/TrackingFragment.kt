@@ -276,10 +276,4 @@ class TrackingFragment : Fragment(), MenuProvider {
         }
         return false
     }
-
-    companion object {
-
-        @JvmStatic
-        fun newInstance() = TrackingFragment()
-    }
 }

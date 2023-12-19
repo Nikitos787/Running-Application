@@ -16,7 +16,7 @@ import java.util.Locale
 @SuppressLint("ViewConstructor")
 class CustomMarkerView
     (
-    val runs: List<Run>,
+    private val runs: List<Run>,
     context: Context,
     layoutId: Int
 ) :

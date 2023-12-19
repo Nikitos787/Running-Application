@@ -67,9 +67,4 @@ class SettingFragment : Fragment() {
         requireActivity().findViewById<MaterialTextView>(R.id.tvToolBar).text = tooBarText
         return true
     }
-
-        companion object {
-        @JvmStatic
-        fun newInstance() = SettingFragment()
-    }
 }
