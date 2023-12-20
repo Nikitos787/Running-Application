@@ -70,7 +70,7 @@ class TrackingService : LifecycleService() {
         timeRunsInMillis.postValue(0L)
     }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate() {
         super.onCreate()
         currentNotificationBuilder = baseNotificationBuilder
@@ -179,6 +179,7 @@ class TrackingService : LifecycleService() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     @SuppressLint("MissingPermission")
     private fun updateLocationTracking(isTracking: Boolean) {
         if (isTracking) {

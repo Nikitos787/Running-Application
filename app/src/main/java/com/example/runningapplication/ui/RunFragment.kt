@@ -1,12 +1,25 @@
 package com.example.runningapplication.ui
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.startActivity
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -22,6 +35,8 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class RunFragment : Fragment() {
+    private var locationPermissionLauncher: ActivityResultLauncher<String>? = null
+    private var backgroundLocationPermissionLauncher: ActivityResultLauncher<String>? = null
     private lateinit var binding: FragmentRunBinding
     private lateinit var runAdapter: RunAdapter
     private val viewModel: MainViewModel by viewModels()
@@ -37,7 +52,6 @@ class RunFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        requestPermissions()
         setupRecyclerView()
 
         val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
@@ -101,19 +115,123 @@ class RunFragment : Fragment() {
             val action = RunFragmentDirections.actionRunFragmentToTrackingFragment()
             findNavController().navigate(action)
         }
-    }
 
-    private fun requestPermissions() {
-        if (TrackingUtility.isLocationOk(requireContext())) {
-            Toast.makeText(requireContext(), "Permission done", Toast.LENGTH_LONG).show()
-        } else {
-            TrackingUtility.requestLocationPermission(requireActivity())
-        }
+        locationPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+                if (isGranted) {
+                    // Location permission is granted
+                    checkBackgroundLocationPermission()
+                } else {
+                    showPermissionInfoAndNavigateToSettings()
+                }
+            }
+
+        backgroundLocationPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+                if (isGranted) {
+                    return@registerForActivityResult
+                } else {
+                    Toast.makeText(requireContext(), "Background Location Permission is required", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+        checkLocationPermission()
     }
 
     private fun setupRecyclerView() = with(binding) {
         runAdapter = RunAdapter()
         rvRuns.adapter = runAdapter
         rvRuns.layoutManager = LinearLayoutManager(requireContext())
+    }
+
+    private fun checkLocationPermission() {
+        when {
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                // Location permission is granted
+                checkBackgroundLocationPermission()
+            }
+            ActivityCompat.shouldShowRequestPermissionRationale(
+                requireActivity(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) -> showLocationPermissionRationale()
+            else -> requestLocationPermission()
+        }
+    }
+
+    private fun showLocationPermissionRationale() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Permission Needed!")
+            .setMessage("Location Permission Needed!")
+            .setPositiveButton("OK") { dialog, which ->
+                requestLocationPermission()
+            }
+            .setNegativeButton("CANCEL") { dialog, which ->
+                Toast.makeText(requireContext(), "Location Permission is required", Toast.LENGTH_SHORT).show()
+            }
+            .create().show()
+    }
+
+    private fun requestLocationPermission() {
+        locationPermissionLauncher?.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
+    private fun checkBackgroundLocationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    return
+                }
+                ActivityCompat.shouldShowRequestPermissionRationale(
+                    requireActivity(),
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                ) -> showBackgroundLocationPermissionRationale()
+                else -> requestBackgroundLocationPermission()
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun showBackgroundLocationPermissionRationale() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Permission Needed!")
+            .setMessage("Background Location Permission Needed! Tap \"Allow all time in the next screen\"")
+            .setPositiveButton("OK") { dialog, which ->
+                requestBackgroundLocationPermission()
+            }
+            .setNegativeButton("CANCEL") { dialog, which ->
+                Toast.makeText(requireContext(), "Background location Permission is required", Toast.LENGTH_SHORT).show()
+
+            }
+            .create().show()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun requestBackgroundLocationPermission() {
+        backgroundLocationPermissionLauncher?.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+    }
+
+    private fun showPermissionInfoAndNavigateToSettings() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Permission Needed!")
+            .setMessage("Location Permission Needed! Please go to app settings and enable the location permission.")
+            .setPositiveButton("OK") { dialog, which ->
+                navigateToAppSettings()
+            }
+            .create().show()
+    }
+
+    private fun navigateToAppSettings() {
+        val intent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", requireContext().packageName, null)
+        )
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
     }
 }
